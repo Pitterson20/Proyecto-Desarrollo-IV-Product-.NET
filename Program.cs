@@ -1,6 +1,11 @@
+using System.Text.Json;
+using Ferreteria.Common.Errors;
+using Ferreteria.Common.Validation;
 using Ferreteria.Data;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+
+FluentValidationConfiguration.Configure();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,21 +14,24 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 EnsureDatabaseDirectory(connectionString);
 
-builder.Services.AddOpenApi();
-
 builder.Services.AddDbContext<AppDBContext>(options =>
     options.UseSqlite(connectionString));
 
-builder.Services.AddControllers();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+});
+
+builder.Services
+    .AddControllers(options => options.Filters.Add<ValidationFilter>())
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+    });
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
-app.UseHttpsRedirection();
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.MapControllers();
 
