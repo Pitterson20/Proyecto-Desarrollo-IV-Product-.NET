@@ -62,6 +62,21 @@ public sealed class ExceptionHandlingMiddleware
                 message = exception.Message
             });
         }
+        catch (UnauthorizedException exception)
+        {
+            await WriteAsync(context, StatusCodes.Status401Unauthorized, new
+            {
+                message = exception.Message
+            });
+        }
+        catch (TooManyRequestsException exception)
+        {
+            await WriteAsync(
+                context,
+                StatusCodes.Status429TooManyRequests,
+                new { message = exception.Message },
+                exception.RetryAfterSeconds);
+        }
         catch (UnauthorizedAccessException)
         {
             await WriteAsync(context, StatusCodes.Status401Unauthorized, new
@@ -94,7 +109,11 @@ public sealed class ExceptionHandlingMiddleware
         }
     }
 
-    private async Task WriteAsync(HttpContext context, int statusCode, object body)
+    private async Task WriteAsync(
+        HttpContext context,
+        int statusCode,
+        object body,
+        int? retryAfterSeconds = null)
     {
         if (context.Response.HasStarted)
         {
@@ -104,6 +123,11 @@ public sealed class ExceptionHandlingMiddleware
         context.Response.Clear();
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json; charset=utf-8";
+
+        if (retryAfterSeconds is not null)
+        {
+            context.Response.Headers.RetryAfter = retryAfterSeconds.Value.ToString();
+        }
 
         await JsonSerializer.SerializeAsync(context.Response.Body, body, _jsonOptions);
     }

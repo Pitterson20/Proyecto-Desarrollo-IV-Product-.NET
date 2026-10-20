@@ -1,7 +1,11 @@
 using System.Text.Json;
+using Ferreteria.Auth;
 using Ferreteria.Common.Errors;
 using Ferreteria.Common.Validation;
 using Ferreteria.Data;
+using Ferreteria.DTOs.Auth;
+using Ferreteria.Validators.Auth;
+using FluentValidation;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,9 +33,14 @@ builder.Services
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
     });
 
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddScoped<IValidator<LoginRequest>, LoginRequestValidator>();
+
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 
