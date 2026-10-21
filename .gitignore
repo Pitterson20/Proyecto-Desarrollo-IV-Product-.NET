@@ -13,7 +13,6 @@ publish/
 *.db
 *.db-shm
 *.db-wal
-data/
 
 ## Test results
 TestResults/
