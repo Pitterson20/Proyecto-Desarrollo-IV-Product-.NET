@@ -1,0 +1,24 @@
+## Build results
+bin/
+obj/
+publish/
+
+## Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+
+## Local database files
+*.db
+*.db-shm
+*.db-wal
+data/
+
+## Test results
+TestResults/
+coverage/
+
+## Local environment overrides
+appsettings.Local.json
+.env
