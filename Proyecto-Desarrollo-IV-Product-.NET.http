@@ -1,6 +1,105 @@
-@Proyecto_Desarrollo_IV_Product_.NET_HostAddress = http://localhost:5135
+@host = http://localhost:5135
 
-GET {{Proyecto_Desarrollo_IV_Product_.NET_HostAddress}}/weatherforecast/
+### Inicio de sesión
+# @name login
+POST {{host}}/api/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "password"
+}
+
+### Token devuelto por el inicio de sesión
+@token = {{login.response.body.token}}
+
+### Listado paginado
+GET {{host}}/api/products?page=1&per_page=10
+Authorization: Bearer {{token}}
 Accept: application/json
 
-###
+### Listado con filtros
+GET {{host}}/api/products?q=martillo&category_id=1&is_active=true&sort=price&direction=desc
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Detalle
+GET {{host}}/api/products/1
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Crear producto
+POST {{host}}/api/products
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "category_id": 1,
+  "brand_id": 1,
+  "unit_id": 1,
+  "name": "Martillo de prueba",
+  "description": "Producto creado desde el archivo HTTP",
+  "price": 12500.00,
+  "sku": "SKU-HTTP-001",
+  "barcode": "7509999999999",
+  "stock_quantity": 45,
+  "minimum_stock": 10,
+  "maximum_stock": 100,
+  "tax_rate": 0.13,
+  "weight": 0.45,
+  "image_url": "https://ferreteria-ucr.com/images/martillo.jpg",
+  "is_active": true
+}
+
+### Actualización parcial
+PUT {{host}}/api/products/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "price": 13000.00,
+  "stock_quantity": 40,
+  "is_active": false
+}
+
+### Eliminar producto
+DELETE {{host}}/api/products/1
+Authorization: Bearer {{token}}
+
+### Validación 422
+POST {{host}}/api/products
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "category_id": 1,
+  "brand_id": 1,
+  "unit_id": 1,
+  "name": "x",
+  "price": -5,
+  "sku": "SKU-BAD-001",
+  "barcode": "7500000000000",
+  "stock_quantity": 1,
+  "image_url": "no-es-una-url"
+}
+
+### Regla R2: stock incoherente
+POST {{host}}/api/products
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "category_id": 1,
+  "brand_id": 1,
+  "unit_id": 1,
+  "name": "Stock incoherente",
+  "price": 100,
+  "sku": "SKU-R2-002",
+  "stock_quantity": 5,
+  "minimum_stock": 100,
+  "maximum_stock": 10
+}
+
+### Cierre de sesión
+POST {{host}}/api/logout
+Authorization: Bearer {{token}}
