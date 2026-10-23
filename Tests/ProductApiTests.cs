@@ -221,6 +221,73 @@ public sealed class ProductApiTests
                 .GetInt32());
     }
 
+    [Fact]
+    public async Task FiltrosOrdenamientoYFiltroLogicoFuncionan()
+    {
+        await using var factory = new ProductApiFactory();
+        using var client = factory.CreateClient();
+
+        var token = await LoginAsync(client, "admin@example.com");
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        using var search = await client.GetAsync("/api/products?q=Martillo");
+        Assert.Equal(HttpStatusCode.OK, search.StatusCode);
+
+        using var searchBody = JsonDocument.Parse(
+            await search.Content.ReadAsStringAsync());
+        Assert.Equal(1, searchBody.RootElement
+            .GetProperty("meta")
+            .GetProperty("total")
+            .GetInt32());
+
+        using var category = await client.GetAsync(
+            "/api/products?category_id=1&per_page=50");
+        using var categoryBody = JsonDocument.Parse(
+            await category.Content.ReadAsStringAsync());
+        Assert.Equal(2, categoryBody.RootElement
+            .GetProperty("meta")
+            .GetProperty("total")
+            .GetInt32());
+
+        using var prices = await client.GetAsync(
+            "/api/products?min_price=80000&max_price=90000");
+        using var pricesBody = JsonDocument.Parse(
+            await prices.Content.ReadAsStringAsync());
+        Assert.Equal(1, pricesBody.RootElement
+            .GetProperty("meta")
+            .GetProperty("total")
+            .GetInt32());
+
+        using var sorted = await client.GetAsync(
+            "/api/products?sort=price&direction=desc&per_page=50");
+        using var sortedBody = JsonDocument.Parse(
+            await sorted.Content.ReadAsStringAsync());
+        Assert.Equal(
+            85000m,
+            sortedBody.RootElement
+                .GetProperty("data")[0]
+                .GetProperty("precio")
+                .GetDecimal());
+
+        using var missing = await client.GetAsync("/api/products/999");
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+
+        using var deleted = await client.DeleteAsync("/api/products/5");
+        Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
+
+        using var deletedDetail = await client.GetAsync("/api/products/5");
+        Assert.Equal(HttpStatusCode.NotFound, deletedDetail.StatusCode);
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDBContext>();
+        var softDeleted = await db.Products
+            .IgnoreQueryFilters()
+            .SingleAsync(product => product.Id == 5);
+
+        Assert.NotNull(softDeleted.DeletedAt);
+    }
+
     private static async Task<string> LoginAsync(HttpClient client, string email)
     {
         using var response = await client.PostAsJsonAsync("/api/login", new
